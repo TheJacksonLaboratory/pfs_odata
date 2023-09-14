@@ -1,4 +1,5 @@
 import base64
+import json
 from json import JSONDecodeError
 from typing import Optional
 from pfs_exceptions import pfsApiException
@@ -7,13 +8,7 @@ import requests
 import urllib.parse
 import logging
 from datetime import date, time, datetime
-from models import HttpResult
-
-"""
-TODO 08/31/2023
-
-Add functionality to generate_filter_query() to handle contains operation
-"""
+from models import pfsHttpResult, Sample
 
 
 class pfs_session:
@@ -70,18 +65,6 @@ class pfs_session:
         return " and ".join(queries)
 
     @staticmethod
-    def generate_select_query(properties: list[str]) -> str:
-        """
-        Function to auto-generate the odata select query from lists of input
-        :param properties: Properties/attributes of an entity you want query
-        :type properties: list
-        :return: String of OData $select query, for more info see
-                 https://learn.microsoft.com/en-us/aspnet/web-api/overview/odata-support-in-aspnet-web-api/using-select-expand-and-value
-        :rtype: str
-        """
-        return f"{','.join(properties)}"
-
-    @staticmethod
     def generate_order_by_query(order_by: tuple):
         """
 
@@ -93,15 +76,14 @@ class pfs_session:
         return f"{order_by[0]} {order_by[1]}"
 
     @staticmethod
-    def _create_request_message(url: str,
-                                params=None,
-                                barcode: Optional[str] = None,
-                                order_by: Optional[tuple] = None,
-                                select: Optional[list] = None,
-                                filter_by: Optional[list] = None,  # JAX_ASSAY_STRAINNAME
-                                filter_by_values: Optional[list] = None,
-                                operators: Optional[list] = None  # And, Or, <, >, = etc
-                                ) -> str:
+    def create_request_message(url: str,
+                               params=None,
+                               barcode: Optional[str] = None,
+                               order_by: Optional[tuple] = None,
+                               filter_by: Optional[list] = None,  # JAX_ASSAY_STRAINNAME
+                               filter_by_values: Optional[list] = None,
+                               operators: Optional[list] = None  # And, Or, <, >, = etc
+                               ) -> str:
         """
         Function to form the url that will be used to make the http request.
         """
@@ -116,17 +98,14 @@ class pfs_session:
             # params["$filter"] = f"{filter_by} {operator} '{filter_by_value}'"
             params["$filter"] = pfs_session.generate_filter_query(filters=filter_by, vals=filter_by_values,
                                                                   operators=operators)
-        if select:
-            # params["$select"] = f"{','.join(select)}"
-            params["$select"] = pfs_session.generate_select_query(properties=select)
 
         url = url + "&".join("{}={}".format(key, value) for key, value in params.items())
         return url
 
-    def _send_request(self,
-                      url: str,
-                      http_method: str,
-                      payload: dict) -> HttpResult:
+    def send_request(self,
+                     url: str,
+                     http_method: str,
+                     payload: dict) -> pfsHttpResult:
         """
         Function to make the http request
         :param url: url to make the http request
@@ -142,7 +121,7 @@ class pfs_session:
         encoded_u = base64.b64encode(userpass.encode()).decode()
         headers = {"Authorization": "Basic %s" % encoded_u}
         log_line_pre = f"method={http_method}, url={url}"
-        log_line_post = ', '.join((log_line_pre, "success={}, status_code={}, message={}"))
+        log_line_post = ', '.join((log_line_pre, "success={}, status_code={}"))
 
         try:
             self._logger.debug(msg=log_line_pre)
@@ -156,15 +135,15 @@ class pfs_session:
         is_success = 299 >= response.status_code >= 200  # 200 to 299 is OK
         log_line = log_line_post.format(is_success, response.status_code)
 
-        #Good
+        # Good
         if is_success:
             self._logger.debug(msg=log_line)
-            return HttpResult(response.status_code, message=response.reason, data=data_out)
+            return pfsHttpResult(response.status_code, message=response.reason, data=data_out)
 
         self._logger.error(msg=log_line)
         raise pfsApiException()
 
-    def authenticate(self) -> HttpResult:
+    def authenticate(self) -> pfsHttpResult:
         """
         Function to authenticate your account on PFS
         """
@@ -172,17 +151,16 @@ class pfs_session:
             raise ValueError("Username and password are required")
 
         url = self.base_url + "$metadata"
-        auth_result = self._send_request(url=url, http_method="GET", payload={})
+        auth_result = self.send_request(url=url, http_method="GET", payload={})
         return auth_result
 
-    def fetch_experiment_data(self,
-                              experiment_name: str,
-                              order_by: Optional[tuple] = None,
-                              selected_property: Optional[list] = None,
-                              filter_by: Optional[list] = None,  # JAX_ASSAY_STRAINNAME
-                              filter_by_values: Optional[list] = None,
-                              operators: Optional[list] = None  # And, Or, <, >, = etc
-                              ) -> HttpResult:
+    def get_experiment_data(self,
+                            experiment_name: str,
+                            order_by: Optional[tuple] = None,
+                            filter_by: Optional[list] = None,  # JAX_ASSAY_STRAINNAME
+                            filter_by_values: Optional[list] = None,
+                            operators: Optional[list] = None  # And, Or, <, >, = etc
+                            ) -> pfsHttpResult:
 
         """
 
@@ -209,23 +187,21 @@ class pfs_session:
         :rtype: list[dict]
         """
         pfs_expr_url = f"{self.base_url}{experiment_name}_EXPERIMENT"
-        pfs_expr_url = self._create_request_message(url=pfs_expr_url,
-                                                    order_by=order_by,
-                                                    select=selected_property,
-                                                    filter_by=filter_by,
-                                                    filter_by_values=filter_by_values,
-                                                    operators=operators
-                                                    )
-        return self._send_request(url=pfs_expr_url, http_method="GET", payload={})
+        pfs_expr_url = self.create_request_message(url=pfs_expr_url,
+                                                   order_by=order_by,
+                                                   filter_by=filter_by,
+                                                   filter_by_values=filter_by_values,
+                                                   operators=operators
+                                                   )
+        return self.send_request(url=pfs_expr_url, http_method="GET", payload={})
 
-    def fetch_assay_data(self,
-                         experiment_name: str,
-                         order_by: Optional[tuple] = None,
-                         selected_property: Optional[list] = None,
-                         filter_by: Optional[list] = None,  # JAX_ASSAY_STRAINNAME
-                         filter_by_values: Optional[list] = None,
-                         operators: Optional[list] = None  # And, Or, <, >, = etc
-                         ) -> HttpResult:
+    def get_assay_data(self,
+                       experiment_name: str,
+                       order_by: Optional[tuple] = None,
+                       filter_by: Optional[list] = None,  # JAX_ASSAY_STRAINNAME
+                       filter_by_values: Optional[list] = None,
+                       operators: Optional[list] = None  # And, Or, <, >, = etc
+                       ) -> pfsHttpResult:
         """
         Function to retrieve data of an experiment assay in Core PFS
         :param experiment_name: name of the experiment/test you want to query
@@ -251,22 +227,20 @@ class pfs_session:
         :rtype: list[dict]
         """
         pfs_assay_url = f"{self.base_url}{experiment_name}_ASSAY_DATA?"
-        pfs_assay_url = self._create_request_message(url=pfs_assay_url,
-                                                     order_by=order_by,
-                                                     select=selected_property,
-                                                     filter_by=filter_by,
-                                                     filter_by_values=filter_by_values,
-                                                     operators=operators)
-        return self._send_request(url=pfs_assay_url, http_method="GET", payload={})
+        pfs_assay_url = self.create_request_message(url=pfs_assay_url,
+                                                    order_by=order_by,
+                                                    filter_by=filter_by,
+                                                    filter_by_values=filter_by_values,
+                                                    operators=operators)
+        return self.send_request(url=pfs_assay_url, http_method="GET", payload={})
 
-    def fetch_sample_data(self,
-                          experiment_name: str,
-                          order_by: Optional[tuple] = None,
-                          selected_property: Optional[list] = None,
-                          filter_by: Optional[list] = None,
-                          filter_by_values: Optional[list] = None,
-                          operators: Optional[list] = None
-                          ) -> HttpResult:
+    def get_sample_data(self,
+                        experiment_name: str,
+                        order_by: Optional[tuple] = None,
+                        filter_by: Optional[list] = None,
+                        filter_by_values: Optional[list] = None,
+                        operators: Optional[list] = None
+                        ) -> pfsHttpResult:
 
         """
         Function to retrieve the data of a sample on Core PFS along with info of its assay and sample lots.
@@ -297,14 +271,13 @@ class pfs_session:
         params = {
             "$expand": "EXPERIMENT_SAMPLE($expand=ENTITY/pfs.MOUSE_SAMPLE_LOT($expand=SAMPLE/pfs.MOUSE_SAMPLE))"
         }
-        pfs_sample_url = self._create_request_message(url=pfs_sample_url,
-                                                      params=params,
-                                                      order_by=order_by,
-                                                      select=selected_property,
-                                                      filter_by=filter_by,
-                                                      filter_by_values=filter_by_values,
-                                                      operators=operators)
-        return self._send_request(url=pfs_sample_url, http_method="GET", payload={})
+        pfs_sample_url = self.create_request_message(url=pfs_sample_url,
+                                                     params=params,
+                                                     order_by=order_by,
+                                                     filter_by=filter_by,
+                                                     filter_by_values=filter_by_values,
+                                                     operators=operators)
+        return self.send_request(url=pfs_sample_url, http_method="GET", payload={})
 
 
 # --------------------------------------line-----------------------------------------
@@ -312,10 +285,10 @@ class pfs_session:
 mySession = pfs_session(
     hostname="jacksonlabstest.platformforscience.com",
     tenant="DEV_KOMP",
-    username="youremail",
-    password="yourpassword"
+    username="youremailaddress",
+    password="password"
 )
-print(mySession.base_url)
+'''
 assay_data = mySession.fetch_assay_data(experiment_name="KOMP_BODY_WEIGHT",
                                         order_by=("JAX_ASSAY_DATEOFBIRTH", "asc"),
                                         selected_property=["JAX_ASSAY_STRAINNAME", "JAX_ASSAY_DATEOFBIRTH"],
@@ -324,3 +297,10 @@ assay_data = mySession.fetch_assay_data(experiment_name="KOMP_BODY_WEIGHT",
                                         operators=["eq", "eq"]
                                         )
 print(assay_data)
+'''
+sample_data = mySession.get_sample_data(experiment_name="KOMP_BODY_WEIGHT")
+# print(sample_data.data["value"])
+samples= sample_data.convert_attributes_name(object_type="SAMPLE")
+sample_list = []
+for sample in samples:
+    sample_list.append(Sample(**sample))
