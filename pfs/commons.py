@@ -24,6 +24,10 @@ def is_date(string, fuzzy=False):
         return False
 
 
+exp_assay_attribute_dict = {
+
+}
+
 sample_attribute_dict = {
     "entitytypename": "entity_type",
     "id": "id",
@@ -51,8 +55,8 @@ sample_attribute_dict = {
     "jax_mousesample_secondaryidvalue": "secondary_id_value",
     "jax_sample_cohortname": "cohort_name",
     "jax_mousesample_blindid": "blind_id",
-    "jax_mousesample_mepid": "MEP_id",
-    "jax_mousesample_nbpid": "NBP_group_id",
+    "jax_mousesample_mepid": "mep_id",
+    "jax_mousesample_nbpid": "nbp_group_id",
     "jax_mousesample_pooledrole": "role",
     "jax_mousesample_sourcepenid": "source_pen_id",
     "jax_mousesample_sex": "sex",
@@ -61,8 +65,8 @@ sample_attribute_dict = {
     "jax_mouseSample_dateofbirth": "date_of_birth",
     "jax_sample_comments": "comments",
     "jax_mousesample_dateofdeath": "date_of_death",
-    "jax_mousesample_reasonfordeath": "reason_for_death:",
-    "jax_mousesample_usersdefinedstrainname": "user_defined_strain_name:",
+    "jax_mousesample_reasonfordeath": "reason_for_death",
+    "jax_mousesample_usersdefinedstrainname": "user_defined_strain_name",
     "jax_mousesample_genotype": "genotype",
     "jax_mousesample_coatcolor": "coat_color",
     "jax_mousesample_pedigree:": "pedigree",
@@ -76,7 +80,23 @@ sample_attribute_dict = {
 }
 
 sample_lot_attribute_dict = {
-
+    "entitytypename": "entity_type",
+    "id": "id",
+    "name": "name",
+    "barcode": "barcode",
+    "created": "data_created",
+    "modified": "date_modified",
+    "active": "active",
+    "likedby": "likeby",
+    "jax_samplelot_status": "sample_lot_status",
+    "jax_samplelot_datecollected": "date_collected",
+    "jax_samplelot_datereceived": "date_received",
+    "jax_samplelot_collectionmethod": "collection_method",
+    "jax_samplelot_transportmedia": "transport_media",
+    "jax_samplelot_source": "source",
+    "jax_samplelot_comment": "comment",
+    "jax_samplelot_faildata": "all_lot_failed",
+    "jax_samplelot_faildatareason": "failed_reason",
+    "jax_samplelot_fundus_required": "fundus_required",
+    "jax_samplelot_fundus_comment": "fundus_comment"
 }
-
-

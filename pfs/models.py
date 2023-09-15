@@ -1,6 +1,6 @@
-import pandas as pd
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict
+
 import commons
 
 """ simple data model that is designed to only carry the essential data of the HTTP transaction"""
@@ -13,60 +13,77 @@ class pfsHttpResult:
         self.data = data if data else []
 
     @staticmethod
-    def parse_json_recursively(json_object, target_key, extracted_data):
+    def parse_json_recursively(json_object, target_key, data_to_extract):
         if type(json_object) is dict and json_object:
             for key in json_object:
                 if key == target_key:
-                    extracted_data.append(json_object[key])
-                pfsHttpResult.parse_json_recursively(json_object[key], target_key, extracted_data)
+                    data_to_extract.append(json_object[key])
+                pfsHttpResult.parse_json_recursively(json_object[key], target_key, data_to_extract)
         elif type(json_object) is list and json_object:
             for item in json_object:
-                pfsHttpResult.parse_json_recursively(item, target_key, extracted_data)
+                pfsHttpResult.parse_json_recursively(item, target_key, data_to_extract)
 
-    '''
-    TODO Sept 14th:
-    1. Refactor the code snippet
-    2. Create data model for sample lot
-    '''
     @staticmethod
-    def process():
-        pass
-
-    def convert_attributes_name(self, object_type: str) -> list[dict]:
+    def process(key_word, data_to_parse, attribute_dict) -> list[dict]:
         """
-        Function to convert attribute names embedded in CORE Lims to ones CBA team needs
-        :param json_objects:
-        :param object_type:
+        Function to perform data extraction and convert the attribute names in the json
+        objects to ones CBA teams need
+        :param data_to_parse:
+        :type data_to_parse:
+        :param key_word:
+        :type key_word:
+        :param attribute_dict:
+        :type attribute_dict:
         :return:
+        :rtype:
         """
         result = []
-        json_object = self.data
+        dict_ = {
+            "SAMPLE": "SAMPLE",
+            "SAMPLE LOT": "ENTITY"
+        }
+        data_out = []
+        try:
+            pfsHttpResult.parse_json_recursively(json_object=data_to_parse, target_key=dict_[key_word],
+                                                 data_to_extract=data_out)
+            for data in data_out:
+                # Convert keys in dictionary to lower case
+                temp = {k.lower(): v for k, v in data.items()}
+                final_data = {(attribute_dict[k] if k in attribute_dict else k): v for (k, v) in
+                              temp.items()}
+                result.append(final_data)
+
+            return result
+
+        except KeyError as err:
+            raise KeyError(f"No such attribute in {data_to_parse}")
+
+    def convert_attributes_name(self, entity_type: str) -> list[dict]:
+        """
+        Function to convert attribute names embedded in CORE Lims to ones CBA teams need
+        :return:
+        """
+        entity_type = entity_type.upper()
         sample_attribute_dict = commons.sample_attribute_dict
+        sample_lot_attribute_dict = commons.sample_lot_attribute_dict
+        exp_assay_attribute_dict = commons.exp_assay_attribute_dict
 
-        if object_type == "SAMPLE":
-            data_out = []
-            pfsHttpResult.parse_json_recursively(json_object=json_object, target_key="SAMPLE", extracted_data=data_out)
-            for data in data_out:
-                # Convert keys in dictionary to lower case
-                temp = {k.lower(): v for k, v in data.items()}
-                final_data = {(sample_attribute_dict[k] if k in sample_attribute_dict else k): v for (k, v) in
-                              temp.items()}
-                print(final_data)
-                result.append(final_data)
-            return result
+        if entity_type == "SAMPLE":
+            return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data,
+                                         attribute_dict=sample_attribute_dict)
 
-        if object_type == "Sample_Lot":
-            data_out = []
-            pfsHttpResult.parse_json_recursively(json_object=json_object, target_key="ENTITY", extracted_data=data_out)
-            for data in data_out:
-                # Convert keys in dictionary to lower case
-                temp = {k.lower(): v for k, v in data.items()}
-                final_data = {(sample_attribute_dict[k] if k in sample_attribute_dict else k): v for (k, v) in
-                              temp.items()}
-                print(final_data)
-                result.append(final_data)
-            return result
+        elif entity_type == "SAMPLE LOT":
+            return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data,
+                                         attribute_dict=sample_lot_attribute_dict)
 
+        elif entity_type == "ASSAY":
+            return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data,
+                                         attribute_dict=exp_assay_attribute_dict)
+
+        raise ValueError(f"Invalid entity type:{entity_type}")
+
+
+###########################################################################################################
 
 """"Data model of API"""
 
@@ -138,3 +155,34 @@ class Sample:
         self.use_for_mouse_name = use_for_mouse_name
         self.mouse_manifest_version = mouse_manifest_version
         self.active_status_tracker = active_status_tracker
+
+
+class SampleLot:
+    def __init__(self, entity_type: str, id: int, name: str, barcode: str, sequence: int, data_created: datetime,
+                 date_modified: datetime, active: bool, likeby: int, followedby: int, locked: bool, ci_lot_num: int,
+                 sample_lot_status: str, date_collected: None, date_received: datetime, collection_method: None,
+                 transport_media: None, source: None, comment: None, all_lot_failed: bool, failed_reason: None,
+                 fundus_required=None, fundus_comment=None) -> None:
+        self.entity_type = entity_type
+        self.id = id
+        self.name = name
+        self.barcode = barcode
+        self.sequence = sequence
+        self.data_created = data_created
+        self.date_modified = date_modified
+        self.active = active
+        self.likeby = likeby
+        self.followedby = followedby
+        self.locked = locked
+        self.ci_lot_num = ci_lot_num
+        self.sample_lot_status = sample_lot_status
+        self.date_collected = date_collected
+        self.date_received = date_received
+        self.collection_method = collection_method
+        self.transport_media = transport_media
+        self.source = source
+        self.comment = comment
+        self.all_lot_failed = all_lot_failed
+        self.failed_reason = failed_reason
+        self.fundus_required = None if fundus_required is None else fundus_required
+        self.fundus_comment = None if fundus_comment is None else fundus_comment

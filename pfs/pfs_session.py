@@ -1,14 +1,20 @@
 import base64
 import json
-from json import JSONDecodeError
-from typing import Optional
-from pfs_exceptions import pfsApiException
-import commons
-import requests
-import urllib.parse
 import logging
-from datetime import date, time, datetime
-from models import pfsHttpResult, Sample
+from datetime import datetime
+from typing import Optional
+
+import requests
+
+import commons
+from models import pfsHttpResult, Sample, SampleLot
+from pfs_exceptions import pfsApiException
+
+"""
+TODO Sept 18th
+1. Modify the function generate_filter_query() so that each http request can only have up to 1 filtering condition
+2. Find ways to apply $filter and $orderby inside expand statement
+"""
 
 
 class pfs_session:
@@ -76,14 +82,10 @@ class pfs_session:
         return f"{order_by[0]} {order_by[1]}"
 
     @staticmethod
-    def create_request_message(url: str,
-                               params=None,
-                               barcode: Optional[str] = None,
-                               order_by: Optional[tuple] = None,
-                               filter_by: Optional[list] = None,  # JAX_ASSAY_STRAINNAME
-                               filter_by_values: Optional[list] = None,
-                               operators: Optional[list] = None  # And, Or, <, >, = etc
-                               ) -> str:
+    def create_request(url: str, params=None, barcode: Optional[str] = None, order_by: Optional[tuple] = None,
+                       filter_by: Optional[list] = None, filter_by_values: Optional[list] = None,
+                       operators: Optional[list] = None  # And, Or, <, >, = etc
+                       ) -> str:
         """
         Function to form the url that will be used to make the http request.
         """
@@ -102,10 +104,7 @@ class pfs_session:
         url = url + "&".join("{}={}".format(key, value) for key, value in params.items())
         return url
 
-    def send_request(self,
-                     url: str,
-                     http_method: str,
-                     payload: dict) -> pfsHttpResult:
+    def send_request(self, url: str, http_method: str, payload: dict) -> pfsHttpResult:
         """
         Function to make the http request
         :param url: url to make the http request
@@ -128,7 +127,7 @@ class pfs_session:
             response = requests.request(http_method, url, headers=headers, data=payload)
             data_out = response.json()
 
-        except (ValueError, JSONDecodeError) as e:
+        except (ValueError, json.JSONDecodeError) as e:
             self._logger.error(msg=(str(e)))
             raise pfsApiException("Bad JSON in response") from e
 
@@ -154,11 +153,8 @@ class pfs_session:
         auth_result = self.send_request(url=url, http_method="GET", payload={})
         return auth_result
 
-    def get_experiment_data(self,
-                            experiment_name: str,
-                            order_by: Optional[tuple] = None,
-                            filter_by: Optional[list] = None,  # JAX_ASSAY_STRAINNAME
-                            filter_by_values: Optional[list] = None,
+    def get_experiment_data(self, experiment_name: str, order_by: Optional[tuple] = None,
+                            filter_by: Optional[list] = None, filter_by_values: Optional[list] = None,
                             operators: Optional[list] = None  # And, Or, <, >, = etc
                             ) -> pfsHttpResult:
 
@@ -168,8 +164,6 @@ class pfs_session:
         :type experiment_name: str
         :param order_by: Order you want to sort your query result, please follow the format(ENTITY_ATTRIBUTE, asc / dsc)
         :type order_by: tuple
-        :param selected_property: Properties/attributes of an entity you want query
-        :type selected_property: list
 
         Attention:
         Make sure that each element in one of your input "filter_by" has a one-to-one correspondence to
@@ -187,19 +181,16 @@ class pfs_session:
         :rtype: list[dict]
         """
         pfs_expr_url = f"{self.base_url}{experiment_name}_EXPERIMENT"
-        pfs_expr_url = self.create_request_message(url=pfs_expr_url,
-                                                   order_by=order_by,
-                                                   filter_by=filter_by,
-                                                   filter_by_values=filter_by_values,
-                                                   operators=operators
-                                                   )
+        pfs_expr_url = self.create_request(url=pfs_expr_url,
+                                           order_by=order_by,
+                                           filter_by=filter_by,
+                                           filter_by_values=filter_by_values,
+                                           operators=operators
+                                           )
         return self.send_request(url=pfs_expr_url, http_method="GET", payload={})
 
-    def get_assay_data(self,
-                       experiment_name: str,
-                       order_by: Optional[tuple] = None,
-                       filter_by: Optional[list] = None,  # JAX_ASSAY_STRAINNAME
-                       filter_by_values: Optional[list] = None,
+    def get_assay_data(self, experiment_name: str, order_by: Optional[tuple] = None,
+                       filter_by: Optional[list] = None, filter_by_values: Optional[list] = None,
                        operators: Optional[list] = None  # And, Or, <, >, = etc
                        ) -> pfsHttpResult:
         """
@@ -208,8 +199,6 @@ class pfs_session:
         :type experiment_name: str
         :param order_by: Order you want to sort your query result, please follow the format(ENTITY_ATTRIBUTE, asc / dsc)
         :type order_by: tuple
-        :param selected_property: Properties/attributes of an entity you want query
-        :type selected_property: list
 
         Attention:
         Make sure that each element in one of your input "filter_by" has a one-to-one correspondence to
@@ -227,20 +216,16 @@ class pfs_session:
         :rtype: list[dict]
         """
         pfs_assay_url = f"{self.base_url}{experiment_name}_ASSAY_DATA?"
-        pfs_assay_url = self.create_request_message(url=pfs_assay_url,
-                                                    order_by=order_by,
-                                                    filter_by=filter_by,
-                                                    filter_by_values=filter_by_values,
-                                                    operators=operators)
+        pfs_assay_url = self.create_request(url=pfs_assay_url,
+                                            order_by=order_by,
+                                            filter_by=filter_by,
+                                            filter_by_values=filter_by_values,
+                                            operators=operators)
         return self.send_request(url=pfs_assay_url, http_method="GET", payload={})
 
-    def get_sample_data(self,
-                        experiment_name: str,
-                        order_by: Optional[tuple] = None,
-                        filter_by: Optional[list] = None,
-                        filter_by_values: Optional[list] = None,
-                        operators: Optional[list] = None
-                        ) -> pfsHttpResult:
+    def get_sample_data(self, experiment_name: str, order_by: Optional[tuple] = None,
+                        filter_by: Optional[list] = None, filter_by_values: Optional[list] = None,
+                        operators: Optional[list] = None) -> pfsHttpResult:
 
         """
         Function to retrieve the data of a sample on Core PFS along with info of its assay and sample lots.
@@ -249,8 +234,6 @@ class pfs_session:
         :type experiment_name: str
         :param order_by: Order you want to sort your query result, please follow the format(ENTITY_ATTRIBUTE, asc / dsc)
         :type order_by: tuple
-        :param selected_property: Properties/attributes of an entity you want query
-        :type selected_property: list
 
         Attention:
         Make sure that each element in one of your input "filter_by" has a one-to-one correspondence to
@@ -271,13 +254,61 @@ class pfs_session:
         params = {
             "$expand": "EXPERIMENT_SAMPLE($expand=ENTITY/pfs.MOUSE_SAMPLE_LOT($expand=SAMPLE/pfs.MOUSE_SAMPLE))"
         }
-        pfs_sample_url = self.create_request_message(url=pfs_sample_url,
-                                                     params=params,
-                                                     order_by=order_by,
-                                                     filter_by=filter_by,
-                                                     filter_by_values=filter_by_values,
-                                                     operators=operators)
+        pfs_sample_url = self.create_request(url=pfs_sample_url,
+                                             params=params,
+                                             order_by=order_by,
+                                             filter_by=filter_by,
+                                             filter_by_values=filter_by_values,
+                                             operators=operators)
         return self.send_request(url=pfs_sample_url, http_method="GET", payload={})
+
+    def get_sample_lot_data(self, experiment_name: str, order_by: Optional[tuple] = None,
+                            filter_by: Optional[list] = None, filter_by_values: Optional[list] = None,
+                            operators: Optional[list] = None) -> pfsHttpResult:
+        """
+
+        Function to retrieve the data of a sample on Core PFS along with info of its assay and sample lots.
+
+        :param experiment_name: name of the experiment/test you want to query
+        :type experiment_name: str
+        :param order_by: Order you want to sort your query result, please follow the format(ENTITY_ATTRIBUTE, asc / dsc)
+        :type order_by: tuple
+
+        Attention:
+        Make sure that each element in one of your input "filter_by" has a one-to-one correspondence to
+        other two("filter_by_values" and "operators"). e.g. filters = [JAX_ASSAY_STRAINNAME, JAX_ASSAY_DATEOFBIRTH],
+        vals = ["1234567", "2000-01-01"], operators = ["=",">"]. In this example, "JAX_ASSAY_STRAINNAME" is corresponded
+        to "1234567" in list "vals" and "=" in list "operators", so on and so forth.
+
+        :param filter_by: Attributes you want to apply the filtering condition to
+        :type filter_by: list
+        :param filter_by_values: Values of filtering condition you want to use
+        :type filter_by_values: list
+        :param operators: Logic operator you want to apply to the attributes and values
+        :type operators: list
+        :return: Data of input experiment(experiment_name)
+        :rtype: list[dict]
+        """
+        pfs_sample_url = f"{self.base_url}{experiment_name}_ASSAY_DATA?"
+        params = {
+            "$expand": "EXPERIMENT_SAMPLE($expand=ENTITY/pfs.MOUSE_SAMPLE_LOT)"
+        }
+        pfs_sample_url = self.create_request(url=pfs_sample_url,
+                                             params=params,
+                                             order_by=order_by,
+                                             filter_by=filter_by,
+                                             filter_by_values=filter_by_values,
+                                             operators=operators)
+        return self.send_request(url=pfs_sample_url, http_method="GET", payload={})
+
+    def create_experiment(self):
+        pass
+
+    def create_sample(self):
+        pass
+
+    def create_sample_lot(self):
+        pass
 
 
 # --------------------------------------line-----------------------------------------
@@ -285,22 +316,24 @@ class pfs_session:
 mySession = pfs_session(
     hostname="jacksonlabstest.platformforscience.com",
     tenant="DEV_KOMP",
-    username="youremailaddress",
-    password="password"
+    username="",
+    password=""
 )
-'''
-assay_data = mySession.fetch_assay_data(experiment_name="KOMP_BODY_WEIGHT",
-                                        order_by=("JAX_ASSAY_DATEOFBIRTH", "asc"),
-                                        selected_property=["JAX_ASSAY_STRAINNAME", "JAX_ASSAY_DATEOFBIRTH"],
-                                        filter_by=["JAX_ASSAY_STRAINNAME", "JAX_ASSAY_DATEOFBIRTH"],
-                                        filter_by_values=["TFJR0002", "2023-06-20"],
-                                        operators=["eq", "eq"]
-                                        )
-print(assay_data)
-'''
+
 sample_data = mySession.get_sample_data(experiment_name="KOMP_BODY_WEIGHT")
-# print(sample_data.data["value"])
-samples= sample_data.convert_attributes_name(object_type="SAMPLE")
+samples = sample_data.convert_attributes_name(entity_type="SAMPLE")
 sample_list = []
 for sample in samples:
     sample_list.append(Sample(**sample))
+print(sample_list)
+
+sample_lot_data = mySession.get_sample_lot_data(experiment_name="CBA_GLUCOSE_TOLERANCE_TEST")
+print(sample_lot_data.data["value"])
+sample_lots = sample_lot_data.convert_attributes_name(entity_type="SAMPLE LOT")
+# json_object = json.dumps(sample_lots[0], indent=4)
+# print(json_object)
+l = []
+for sample_lot in sample_lots:
+    l.append(SampleLot(**sample_lot))
+
+print(l)
