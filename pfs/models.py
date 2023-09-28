@@ -1,11 +1,10 @@
 from datetime import datetime
 from typing import List, Dict
 
-import commons
-
-""" simple data model that is designed to only carry the essential data of the HTTP transaction"""
+from .commons import operators, is_date, sample_attribute_dict, sample_lot_attribute_dict, exp_assay_attribute_dict
 
 
+# A simple data model that is designed to only carry the essential data of the HTTP transaction
 class pfsHttpResult:
     def __init__(self, status_code: int, message: str = '', data: List[Dict] = None):
         self.status_code = int(status_code)
@@ -17,7 +16,12 @@ class pfsHttpResult:
         if type(json_object) is dict and json_object:
             for key in json_object:
                 if key == target_key:
-                    data_to_extract.append(json_object[key])
+                    # In case there is a list of json data
+                    if isinstance(json_object[key], list):
+                        for d in json_object[key]:
+                            data_to_extract.append(d)
+                    else:
+                        data_to_extract.append(json_object[key])
                 pfsHttpResult.parse_json_recursively(json_object[key], target_key, data_to_extract)
         elif type(json_object) is list and json_object:
             for item in json_object:
@@ -39,6 +43,7 @@ class pfsHttpResult:
         """
         result = []
         dict_ = {
+            "REV_MOUSESAMPLE_STRAIN": "REV_MOUSESAMPLE_STRAIN",
             "SAMPLE": "SAMPLE",
             "SAMPLE LOT": "ENTITY"
         }
@@ -64,11 +69,8 @@ class pfsHttpResult:
         :return:
         """
         entity_type = entity_type.upper()
-        sample_attribute_dict = commons.sample_attribute_dict
-        sample_lot_attribute_dict = commons.sample_lot_attribute_dict
-        exp_assay_attribute_dict = commons.exp_assay_attribute_dict
 
-        if entity_type == "SAMPLE":
+        if entity_type == "SAMPLE" or entity_type == "REV_MOUSESAMPLE_STRAIN":
             return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data,
                                          attribute_dict=sample_attribute_dict)
 
@@ -85,7 +87,15 @@ class pfsHttpResult:
 
 ###########################################################################################################
 
-""""Data model of API"""
+# Data models
+class Assay:
+    def __init__(self):
+        pass
+
+
+class Experiment:
+    def __init__(self):
+        pass
 
 
 class Sample:
@@ -186,3 +196,40 @@ class SampleLot:
         self.failed_reason = failed_reason
         self.fundus_required = None if fundus_required is None else fundus_required
         self.fundus_comment = None if fundus_comment is None else fundus_comment
+
+
+class Strain:
+
+    def __init__(self, entity_type_name: str, id: int, name: str, barcode: str, sequence: int, created: datetime,
+                 modified: datetime, active: bool, liked_by: int, followed_by: int, locked: bool,
+                 last_strain_update: datetime, privacy_label: None, owner: str, strain_status: None,
+                 strain_comments: None, strain_mgi_ref_id: None, strain_komp_eap_status: None) -> None:
+        self.entity_type_name = entity_type_name
+        self.id = id
+        self.name = name
+        self.barcode = barcode
+        self.sequence = sequence
+        self.created = created
+        self.modified = modified
+        self.active = active
+        self.liked_by = liked_by
+        self.followed_by = followed_by
+        self.locked = locked
+        self.last_strain_update = last_strain_update
+        self.privacy_label = privacy_label
+        self.owner = owner
+        self.strain_status = strain_status
+        self.strain_comments = strain_comments
+
+
+class KOMP_Strain(Strain):
+
+    def __init__(self, entity_type_name: str, id: int, name: str, barcode: str, sequence: int, created: datetime,
+                 modified: datetime, active: bool, liked_by: int, followed_by: int, locked: bool,
+                 last_strain_update: datetime, privacy_label: None, owner: str, strain_status: None,
+                 strain_comments: None, strain_mgi_ref_id: None, strain_komp_eap_status: None):
+        super().__init__(entity_type_name, id, name, barcode, sequence, created, modified, active, liked_by,
+                         followed_by, locked, last_strain_update, privacy_label, owner, strain_status, strain_comments)
+
+        self.strain_mgi_ref_id = strain_mgi_ref_id
+        self.strain_komp_eap_status = strain_komp_eap_status
