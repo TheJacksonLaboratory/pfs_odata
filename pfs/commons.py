@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from dateutil.parser import parse
 import ast
 
@@ -9,6 +8,13 @@ operators = {
     "<=": "le",
     "&": "and",
     "||": "or"
+}
+
+entity_types = {
+    "MOUSE_SAMPLE": "MOUSE_SAMPLE",
+    "SAMPLE": "SAMPLE",
+    "SAMPLE_LOT": "ENTITY",
+    "STRAIN": "JAXSTRAIN"
 }
 
 
@@ -86,6 +92,11 @@ exp_assay_attribute_dict = {
 
 }
 
+#Implement it next week
+strain_attribute_dict = {
+
+}
+
 sample_attribute_dict = {
     "entitytypename": "entity_type",
     "id": "id",
@@ -157,4 +168,12 @@ sample_lot_attribute_dict = {
     "jax_samplelot_faildatareason": "failed_reason",
     "jax_samplelot_fundus_required": "fundus_required",
     "jax_samplelot_fundus_comment": "fundus_comment"
+}
+
+dict_of_entity = {
+    "MOUSE_SAMPLE": sample_attribute_dict,
+    "SAMPLE": sample_attribute_dict,
+    "SAMPLE_LOT": sample_lot_attribute_dict,
+    "ASSAY": exp_assay_attribute_dict,
+    "STRAIN": strain_attribute_dict
 }

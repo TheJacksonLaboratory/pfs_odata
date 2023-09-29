@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import List, Dict
-
-from .commons import operators, is_date, sample_attribute_dict, sample_lot_attribute_dict, exp_assay_attribute_dict
+from typing import List, Dict, Optional
+from .commons import sample_attribute_dict, sample_lot_attribute_dict, exp_assay_attribute_dict, entity_types, \
+    dict_of_entity
 
 
 # A simple data model that is designed to only carry the essential data of the HTTP transaction
@@ -11,6 +11,7 @@ class pfsHttpResult:
         self.message = str(message)
         self.data = data if data else []
 
+    # Function to parse json recursively to look for the value corresponding to the key entered
     @staticmethod
     def parse_json_recursively(json_object, target_key, data_to_extract):
         if type(json_object) is dict and json_object:
@@ -28,10 +29,13 @@ class pfsHttpResult:
                 pfsHttpResult.parse_json_recursively(item, target_key, data_to_extract)
 
     @staticmethod
-    def process(key_word, data_to_parse, attribute_dict) -> list[dict]:
+    def process(data_to_parse: list[dict], attribute_dict: dict,
+                recursive: bool = False, key_word: Optional[str] = None) -> list[dict]:
         """
         Function to perform data extraction and convert the attribute names in the json
         objects to ones CBA teams need
+        :param recursive:
+        :type recursive:
         :param data_to_parse:
         :type data_to_parse:
         :param key_word:
@@ -42,47 +46,56 @@ class pfsHttpResult:
         :rtype:
         """
         result = []
-        dict_ = {
-            "REV_MOUSESAMPLE_STRAIN": "REV_MOUSESAMPLE_STRAIN",
-            "SAMPLE": "SAMPLE",
-            "SAMPLE LOT": "ENTITY"
-        }
         data_out = []
         try:
-            pfsHttpResult.parse_json_recursively(json_object=data_to_parse, target_key=dict_[key_word],
-                                                 data_to_extract=data_out)
-            for data in data_out:
-                # Convert keys in dictionary to lower case
-                temp = {k.lower(): v for k, v in data.items()}
-                final_data = {(attribute_dict[k] if k in attribute_dict else k): v for (k, v) in
-                              temp.items()}
-                result.append(final_data)
+            # Nested json data case
+            if recursive:
+                if not key_word:
+                    raise ValueError("Missing value of key to look for in the nested json")
 
-            return result
+                pfsHttpResult.parse_json_recursively(json_object=data_to_parse, target_key=entity_types[key_word],
+                                                     data_to_extract=data_out)
+                for data in data_out:
+                    # Convert keys in dictionary to lower case
+                    temp = {k.lower(): v for k, v in data.items()}
+                    final_data = {(attribute_dict[k] if k in attribute_dict else k): v for (k, v) in
+                                  temp.items()}
+                    result.append(final_data)
+
+                return result
+
+            # No nested json
+            else:
+                for data in data_to_parse:
+                    # Convert keys in dictionary to lower case
+                    temp = {k.lower(): v for k, v in data.items()}
+                    final_data = {(attribute_dict[k] if k in attribute_dict else k): v for (k, v) in
+                                  temp.items()}
+                    result.append(final_data)
+                return result
 
         except KeyError as err:
             raise KeyError(f"No such attribute in {data_to_parse}")
 
-    def convert_attributes_name(self, entity_type: str) -> list[dict]:
+    def convert_attributes_name(self, entity_type: Optional[str], recursive: bool = False) -> list[dict]:
         """
         Function to convert attribute names embedded in CORE Lims to ones CBA teams need
         :return:
         """
-        entity_type = entity_type.upper()
+        entity_type = entity_type.upper().replace(" ", "_")
+        if entity_type not in entity_types.keys():
+            raise ValueError(f"Invalid entity type:{entity_type}")
+        attribute_dict = dict_of_entity[entity_type]
 
-        if entity_type == "SAMPLE" or entity_type == "REV_MOUSESAMPLE_STRAIN":
+        # Case when nested json data retrieved
+        if recursive:
             return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data,
-                                         attribute_dict=sample_attribute_dict)
+                                         attribute_dict=attribute_dict, recursive=True)
 
-        elif entity_type == "SAMPLE LOT":
+        # Case when non-nested json data retrieved
+        else:
             return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data,
-                                         attribute_dict=sample_lot_attribute_dict)
-
-        elif entity_type == "ASSAY":
-            return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data,
-                                         attribute_dict=exp_assay_attribute_dict)
-
-        raise ValueError(f"Invalid entity type:{entity_type}")
+                                         attribute_dict=attribute_dict, recursive=False)
 
 
 ###########################################################################################################
@@ -200,11 +213,11 @@ class SampleLot:
 
 class Strain:
 
-    def __init__(self, entity_type_name: str, id: int, name: str, barcode: str, sequence: int, created: datetime,
+    def __init__(self, entitytypename: str, id: int, name: str, barcode: str, sequence: int, created: datetime,
                  modified: datetime, active: bool, liked_by: int, followed_by: int, locked: bool,
                  last_strain_update: datetime, privacy_label: None, owner: str, strain_status: None,
                  strain_comments: None, strain_mgi_ref_id: None, strain_komp_eap_status: None) -> None:
-        self.entity_type_name = entity_type_name
+        self.entitytypename = entitytypename
         self.id = id
         self.name = name
         self.barcode = barcode

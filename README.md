@@ -7,7 +7,6 @@ phenotyping Center stores data collected from their experiments. The main purpos
 ```commandline
 from pfs.pfs_session import pfs_session
 import json
-import ast
 
 """This script is for tutorial purposes on how to pull out sample data by strain"""
 

@@ -7,14 +7,12 @@ from typing import Optional
 import requests
 
 from .commons import format_experiment_name, generate_filter_str, to_odata_operator, generate_orderby_str
-from .models import pfsHttpResult, Sample, SampleLot
+from .models import pfsHttpResult, Sample, SampleLot, Strain
 from .pfs_exceptions import pfsApiException
 
 """
-TODO Sept 19th
-1. Apply "&$filter=EXPERIMENT_SAMPLE/EXPERIMENT/Name eq 'GTT330'" to filter query, experiment_barcode -> GTT330,
-see pfs_odata.py
-2. Create data model for assay 
+TODO Oct 2nd:
+1. Create data model for assay, experiment and strain
 """
 
 
@@ -30,7 +28,7 @@ class pfs_session:
 
     @staticmethod
     def create_request(url: str, params=None, barcode: Optional[str] = None, order_by: Optional[tuple] = None,
-                       filter_by: Optional[str] = None) -> str:
+                       filter_by: Optional[str] = None, pre_filter="") -> str:
         """
         Function to form the url that will be used to make the http request.
         """
@@ -42,7 +40,7 @@ class pfs_session:
         if order_by:
             params["$orderby"] = generate_orderby_str(order_by=order_by)
         if filter_by:
-            params["$filter"] = generate_filter_str(filter_by)
+            params["$filter"] = pre_filter + generate_filter_str(filter_by)
 
         url = url + "&".join("{}={}".format(key, value) for key, value in params.items())
         return url
@@ -69,7 +67,7 @@ class pfs_session:
         try:
             self._logger.debug(msg=log_line_pre)
             response = requests.request(http_method, url, headers=headers, data=payload)
-            data_out = response.json()
+            data_out = response.json()["value"]
 
         except (ValueError, json.JSONDecodeError) as e:
             self._logger.error(msg=(str(e)))
@@ -190,6 +188,10 @@ class pfs_session:
             result.append(Sample(**sample))
         return result
 
+    '''
+    Use this query instead:odata/MOUSE_SAMPLE?$expand=MOUSESAMPLE_STRAIN&$filter= MOUSESAMPLE_STRAIN/JAX_STRAIN_KOMP_EAP_STATUS eq 'In Progress'
+    '''
+
     def get_meavals_by_strain(self, order_by: Optional[tuple] = None,
                               filter_by: Optional[str] = None) -> list[Sample]:
         """
@@ -202,25 +204,22 @@ class pfs_session:
         :return: Data in the "SAMPLE" attribute of the json data returned by the request you make
         :rtype: list[Sample]
         """
-        url = f"{self.base_url}JAXSTRAIN?"
-        params = {
-            "$expand": "REV_MOUSESAMPLE_STRAIN"
-        }
+        url = f"{self.base_url}MOUSE_SAMPLE?"
         result = []
         url = self.create_request(url=url,
-                                  params=params,
+                                  params={},
                                   order_by=order_by,
-                                  filter_by=filter_by)
+                                  filter_by=filter_by,
+                                  pre_filter="MOUSESAMPLE_STRAIN/")
         self._logger.info(f"Sending request to {url}")
-        # print(url)
         response = self.send_request(url=url, http_method="GET", payload={})
-        samples = response.convert_attributes_name(entity_type="REV_MOUSESAMPLE_STRAIN")
+        samples = response.convert_attributes_name(entity_type="MOUSE_SAMPLE", recursive=False)
         for sample in samples:
             result.append(Sample(**sample))
         return result
 
     def get_sample_lot(self, experiment_name: str, order_by: Optional[tuple] = None,
-                       filter_by: Optional[str] = None) -> pfsHttpResult:
+                       filter_by: Optional[str] = None) -> list[SampleLot]:
         """
 
         Function to retrieve the data of a sample on Core PFS along with info of its assay and sample lots.
@@ -234,17 +233,25 @@ class pfs_session:
         :return: Data in the "ENTITY" attribute of the json data returned by the request you make
         :rtype: list[Sample]
         """
-        pfs_sample_url = f"{self.base_url}{experiment_name}_ASSAY_DATA?"
+        experiment_name = format_experiment_name(experiment_name)
+        url = f"{self.base_url}{experiment_name}_ASSAY_DATA?"
+        result = []
         params = {
             "$expand": "EXPERIMENT_SAMPLE($expand=ENTITY/pfs.MOUSE_SAMPLE_LOT)"
         }
-        pfs_sample_url = self.create_request(url=pfs_sample_url,
-                                             params=params,
-                                             order_by=order_by,
-                                             filter_by=filter_by)
-        return self.send_request(url=pfs_sample_url, http_method="GET", payload={})
+        url = self.create_request(url=url,
+                                  params=params,
+                                  order_by=order_by,
+                                  filter_by=filter_by)
+        self._logger.info(f"Sending request to {url}")
+        response = self.send_request(url=url, http_method="GET", payload={})
+        sample_lots = response.convert_attributes_name(entity_type="SAMPLE LOT", recursive=True)
+        for lot in sample_lots:
+            result.append(SampleLot(**lot))
 
-    def get_strain(self, barcode: str, order_by: Optional[tuple] = None,
+        return result
+
+    def get_strain(self, order_by: Optional[tuple] = None,
                    filter_by: Optional[str] = None):
         """
 
@@ -258,9 +265,15 @@ class pfs_session:
         :rtype:
         """
         url = f"{self.base_url}JAXSTRAIN?"
+        result = []
         url = self.create_request(url=url, params={}, order_by=order_by, filter_by=filter_by)
         self._logger.info(f"Sending request to {url}")
-        return self.send_request(url=url, http_method="GET", payload={})
+        response = self.send_request(url=url, http_method="GET", payload={})
+        strains = response.convert_attributes_name(entity_type="STRAIN", recursive=False)
+        for s in strains:
+            result.append(Strain(**s))
+
+        return result
 
     '''POST methods'''
 
