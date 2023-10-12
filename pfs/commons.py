@@ -10,6 +10,7 @@ operators = {
     "||": "or"
 }
 
+#Dict to translate user input entity type name to key value in the json data
 entity_types = {
     "MOUSE_SAMPLE": "MOUSE_SAMPLE",
     "SAMPLE": "SAMPLE",
@@ -114,9 +115,9 @@ sample_attribute_dict = {
     "jax_mousesample_accomodation": "accomodation",
     "jax_sample_currentclinicalobs": "current_clinical_observation",
     "jax_mousesample_anticipatedphenotype": "anticipated_clinical_observation",
-    "jax_mousesample_additionalinformation": "additional_notes",
+    "jax_mousesample_additionalinformation": "additional_info",
     "jax_mousesample_immunosufficiency": "immune_status",
-    "jax_sample_externalid": "customer_mouse_id",
+    "jax_sample_externalid": "specimen_id",
     "jax_mousesample_litternumber": "litter_number",
     "jax_mousesample_primaryid": "primary_id",
     "jax_mousesample_primaryidvalue": "primary_id_value",
@@ -131,21 +132,23 @@ sample_attribute_dict = {
     "jax_mousesample_sex": "sex",
     "jax_sample_mousecolonyroom": "mouse_room_of_origin",
     "jax_sample_mouseroomsection": "section_of_origin",
-    "jax_mouseSample_dateofbirth": "date_of_birth",
+    "jax_mousesample_dateofbirth": "date_of_birth",
     "jax_sample_comments": "comments",
     "jax_mousesample_dateofdeath": "date_of_death",
     "jax_mousesample_reasonfordeath": "reason_for_death",
     "jax_mousesample_usersdefinedstrainname": "user_defined_strain_name",
     "jax_mousesample_genotype": "genotype",
     "jax_mousesample_coatcolor": "coat_color",
-    "jax_mousesample_pedigree:": "pedigree",
+    "jax_mousesample_pedigree": "pedigree",
     "jax_mousesample_wholemousefail": "whole_mouse_fail",
     "jax_mousesample_wholemousefailreasons": "fail_reason",
     "jax_mousesample_wholemousefailexplanation": "explanation",
     "jax_mousesample_lotreport": "lot_report",
     "jax_uuid_useforname": "use_for_mouse_name",
     "jax_mousesample_mousemanifestversion": "mouse_manifest_version",
-    "jax_mousesample_activestatusversiontracker": "active_status_tracker"
+    "jax_mousesample_activestatusversiontracker": "active_status_tracker",
+    "jax_mousesample_exitreason": "exit_reason",
+    "jax_mousesample_allele": "colony_id"
 }
 
 sample_lot_attribute_dict = {
@@ -170,6 +173,7 @@ sample_lot_attribute_dict = {
     "jax_samplelot_fundus_comment": "fundus_comment"
 }
 
+# Dict to reference the dict of entity types when converting it into its corresponding data model
 dict_of_entity = {
     "MOUSE_SAMPLE": sample_attribute_dict,
     "SAMPLE": sample_attribute_dict,

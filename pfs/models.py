@@ -116,13 +116,13 @@ class Sample:
                  date_modified: datetime, active: bool, likeby: int, followedby: int, locked: bool,
                  treatment_group: None, diet: str, bedding: str, received_alive: bool, filler_mouse: str,
                  accomodation: str, current_clinical_observation: None, anticipated_clinical_observation: None,
-                 additional_notes: None, immune_status: None, customer_mouse_id: str, litter_number: None,
+                 additional_info: None, immune_status: None, specimen_id: str, litter_number: None,
                  primary_id: str, primary_id_value: int, secondary_id: None, secondary_id_value: None,
                  cohort_name: None, blind_id: None, mep_id: None, nbp_group_id: None, role: None, source_pen_id: None,
-                 sex: str, mouse_room_of_origin: str, section_of_origin: None, jax_mousesample_dateofbirth: datetime,
-                 comments: None, date_of_death: None, reason_for_death: None, jax_mousesample_exitreason: None,
-                 user_defined_strain_name: None, jax_mousesample_allele: str, genotype: str, coat_color: None,
-                 jax_mousesample_pedigree: None, whole_mouse_fail: bool, fail_reason: None, explanation: None,
+                 sex: str, mouse_room_of_origin: str, section_of_origin: None, date_of_birth: datetime,
+                 comments: None, date_of_death: None, reason_for_death: None, exit_reason: None,
+                 user_defined_strain_name: None, colony_id: str, genotype: str, coat_color: None,
+                 pedigree: None, whole_mouse_fail: bool, fail_reason: None, explanation: None,
                  lot_report: str, use_for_mouse_name: bool, mouse_manifest_version: None,
                  active_status_tracker: str) -> None:
         self.entity_type = entity_type
@@ -144,9 +144,9 @@ class Sample:
         self.accomodation = accomodation
         self.current_clinical_observation = current_clinical_observation
         self.anticipated_clinical_observation = anticipated_clinical_observation
-        self.additional_notes = additional_notes
+        self.additional_info = additional_info
         self.immune_status = immune_status
-        self.customer_mouse_id = customer_mouse_id
+        self.specimen_id = specimen_id
         self.litter_number = litter_number
         self.primary_id = primary_id
         self.primary_id_value = primary_id_value
@@ -161,16 +161,16 @@ class Sample:
         self.sex = sex
         self.mouse_room_of_origin = mouse_room_of_origin
         self.section_of_origin = section_of_origin
-        self.jax_mousesample_dateofbirth = jax_mousesample_dateofbirth
+        self.date_of_birth = date_of_birth
         self.comments = comments
         self.date_of_death = date_of_death
         self.reason_for_death = reason_for_death
-        self.jax_mousesample_exitreason = jax_mousesample_exitreason
+        self.exit_reason = exit_reason
         self.user_defined_strain_name = user_defined_strain_name
-        self.jax_mousesample_allele = jax_mousesample_allele
+        self.colony_id = colony_id
         self.genotype = genotype
         self.coat_color = coat_color
-        self.jax_mousesample_pedigree = jax_mousesample_pedigree
+        self.pedigree = pedigree
         self.whole_mouse_fail = whole_mouse_fail
         self.fail_reason = fail_reason
         self.explanation = explanation

@@ -13,6 +13,7 @@ from .pfs_exceptions import pfsApiException
 """
 TODO Oct 2nd:
 1. Create data model for assay, experiment and strain
+2. Change some variable names in sample_attribute_dict in commons.py
 """
 
 
