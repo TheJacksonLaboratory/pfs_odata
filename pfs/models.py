@@ -6,10 +6,10 @@ from .commons import sample_attribute_dict, sample_lot_attribute_dict, exp_assay
 
 # A simple data model that is designed to only carry the essential data of the HTTP transaction
 class pfsHttpResult:
-    def __init__(self, status_code: int, message: str = '', data: List[Dict] = None):
+    def __init__(self, status_code: int, message: str = '', data: dict = None):
         self.status_code = int(status_code)
         self.message = str(message)
-        self.data = data if data else []
+        self.data = data if data else {}
 
     # Function to parse json recursively to look for the value corresponding to the key entered
     @staticmethod
@@ -89,12 +89,12 @@ class pfsHttpResult:
 
         # Case when nested json data retrieved
         if recursive:
-            return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data,
+            return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data["value"],
                                          attribute_dict=attribute_dict, recursive=True)
 
         # Case when non-nested json data retrieved
         else:
-            return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data,
+            return pfsHttpResult.process(key_word=entity_type, data_to_parse=self.data["value"],
                                          attribute_dict=attribute_dict, recursive=False)
 
 
@@ -178,6 +178,10 @@ class Sample:
         self.use_for_mouse_name = use_for_mouse_name
         self.mouse_manifest_version = mouse_manifest_version
         self.active_status_tracker = active_status_tracker
+
+    # Function to tell whether an experiment sample is controlled mice or not
+    def isBaseline(self):
+        pass
 
 
 class SampleLot:

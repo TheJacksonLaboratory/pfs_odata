@@ -26,10 +26,16 @@ if pfs_auth_result.status_code == 200:
 else:
     print("Authentication error, please check your username and password")
 
+data = mySession.get_meavals()
+print_data(data)
+print(f"Number of mouse sample retrieved is {len(data)}")
+
+"""
 # Get sample data related to a specific strain
-strain_data = mySession.get_meavals_by_strain(filter_by="JAX_STRAIN_KOMP_EAP_STATUS = In Progress")
+strain_data = mySession.get_meavals_by_strain(barcode="JR038086")
 print_data(strain_data)
 print(f"Number of mouse sample retrieved is {len(strain_data)}")
+"""
 
 """sample_lot_data = mySession.get_sample_lot(experiment_name="komp body weight")
 print_data(sample_lot_data)

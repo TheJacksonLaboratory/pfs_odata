@@ -68,7 +68,7 @@ class pfs_session:
         try:
             self._logger.debug(msg=log_line_pre)
             response = requests.request(http_method, url, headers=headers, data=payload)
-            data_out = response.json()["value"]
+            data_out = response.json()
 
         except (ValueError, json.JSONDecodeError) as e:
             self._logger.error(msg=(str(e)))
@@ -154,6 +154,36 @@ class pfs_session:
                                             filter_by=filter_by)
         return self.send_request(url=pfs_assay_url, http_method="GET", payload={})
 
+    '''
+    Use this query instead:odata/MOUSE_SAMPLE?$expand=MOUSESAMPLE_STRAIN&$filter= MOUSESAMPLE_STRAIN/JAX_STRAIN_KOMP_EAP_STATUS eq 'In Progress'
+    '''
+
+    def get_meavals(self, order_by: Optional[tuple] = None,
+                    filter_by: Optional[str] = None) -> list[Sample]:
+        """
+        Function to get all animals' measured values.
+        Return a list of Sample object
+        :param order_by: Order you want to sort your query result, please follow the format(ENTITY_ATTRIBUTE, asc / dsc)
+        :type order_by: tuple
+        :param filter_by: Attributes you want to apply the filtering condition to
+        :type filter_by: str
+        :return: Data in the "SAMPLE" attribute of the json data returned by the request you make
+        :rtype: list[Sample]
+        """
+        url = f"{self.base_url}MOUSE_SAMPLE?"
+        result = []
+        url = self.create_request(url=url,
+                                  params={},
+                                  order_by=order_by,
+                                  filter_by=filter_by)
+        self._logger.info(f"Sending request to {url}")
+        response = self.send_request(url=url, http_method="GET", payload={})
+        #data_out = response.data["value"]
+        samples = response.convert_attributes_name(entity_type="MOUSE_SAMPLE", recursive=False)
+        for sample in samples:
+            result.append(Sample(**sample))
+        return result
+
     def get_meavals_by_expr(self, experiment_name: str, project_id: str,
                             order_by: Optional[tuple] = None) -> list[Sample]:
 
@@ -172,49 +202,50 @@ class pfs_session:
         :rtype: list[Sample]
         """
         experiment_name = format_experiment_name(experiment_name)
-        url = f"{self.base_url}{experiment_name}_ASSAY_DATA?"
+        ENDPOINT = f"{experiment_name}_ASSAY_DATA?"
+        # url = f"{self.base_url}{experiment_name}_ASSAY_DATA?"
         params = {
             "$expand": "EXPERIMENT_SAMPLE($expand=ENTITY/pfs.MOUSE_SAMPLE_LOT($expand=SAMPLE/pfs.MOUSE_SAMPLE))",
             "$filter": f"EXPERIMENT_SAMPLE/EXPERIMENT/Name eq '{project_id}'"
         }
         result = []
-        url = self.create_request(url=url,
+        url = self.create_request(url=f"{self.base_url}{ENDPOINT}",
                                   params=params,
                                   order_by=order_by)
         # print(url)
         self._logger.info(f"Sending request to {url}")
         response = self.send_request(url=url, http_method="GET", payload={})
-        samples = response.convert_attributes_name(entity_type="SAMPLE")
+        samples = response.convert_attributes_name(entity_type="SAMPLE", recursive=True)
         for sample in samples:
             result.append(Sample(**sample))
         return result
 
-    '''
-    Use this query instead:odata/MOUSE_SAMPLE?$expand=MOUSESAMPLE_STRAIN&$filter= MOUSESAMPLE_STRAIN/JAX_STRAIN_KOMP_EAP_STATUS eq 'In Progress'
-    '''
+    def get_meavals_by_strain(self, barcode: str, order_by: Optional[tuple] = None,
+                              filter_by: Optional[str] = None):
+        """
 
-    def get_meavals_by_strain(self, order_by: Optional[tuple] = None,
-                              filter_by: Optional[str] = None) -> list[Sample]:
+        :param barcode:
+        :type barcode:
+        :param order_by:
+        :type order_by:
+        :param filter_by:
+        :type filter_by:
+        :return:
+        :rtype:
         """
-        Function to get animal measured values and animal ids, for the given strain and filtering/ordering conditions.
-        Return a list of Sample object
-        :param order_by: Order you want to sort your query result, please follow the format(ENTITY_ATTRIBUTE, asc / dsc)
-        :type order_by: tuple
-        :param filter_by: Attributes you want to apply the filtering condition to
-        :type filter_by: str
-        :return: Data in the "SAMPLE" attribute of the json data returned by the request you make
-        :rtype: list[Sample]
-        """
-        url = f"{self.base_url}MOUSE_SAMPLE?"
+        ENDPOINT = f"JAXSTRAIN('{barcode}')?"
+        params = {
+            "$expand": "REV_MOUSESAMPLE_STRAIN"
+        }
         result = []
-        url = self.create_request(url=url,
-                                  params={},
+        url = self.create_request(url=f"{self.base_url}{ENDPOINT}",
+                                  params=params,
                                   order_by=order_by,
-                                  filter_by=filter_by,
-                                  pre_filter="MOUSESAMPLE_STRAIN/")
+                                  filter_by=filter_by)
+        print(url)
         self._logger.info(f"Sending request to {url}")
         response = self.send_request(url=url, http_method="GET", payload={})
-        samples = response.convert_attributes_name(entity_type="MOUSE_SAMPLE", recursive=False)
+        samples = response.convert_attributes_name(entity_type="SAMPLE", recursive=True)
         for sample in samples:
             result.append(Sample(**sample))
         return result
@@ -235,12 +266,12 @@ class pfs_session:
         :rtype: list[Sample]
         """
         experiment_name = format_experiment_name(experiment_name)
-        url = f"{self.base_url}{experiment_name}_ASSAY_DATA?"
+        ENDPOINT = f"{experiment_name}_ASSAY_DATA?"
         result = []
         params = {
             "$expand": "EXPERIMENT_SAMPLE($expand=ENTITY/pfs.MOUSE_SAMPLE_LOT)"
         }
-        url = self.create_request(url=url,
+        url = self.create_request(url=f"{self.base_url}{ENDPOINT}",
                                   params=params,
                                   order_by=order_by,
                                   filter_by=filter_by)
@@ -309,6 +340,15 @@ mySession = pfs_session(
     password="Steve19981230"
 )
 
+result = mySession.send_request(
+    url="https://jacksonlabstest.platformforscience.com/DEV_KOMP/odata/EXPERIMENT?$filter=EntityTypeName eq 'KOMP_BODY_WEIGHT_EXPERIMENT'",
+    http_method="GET",
+    payload={}
+)
+
+print(result.data)
+
+
 # sample_data = mySession.get_measured_vals(experiment_name="KOMP_BODY_WEIGHT", filter_by="JAX_ASSAY_STRAINNAME =
 # TFJR0002")
 #sample_data = mySession.get_meavals_by_expr(experiment_name="KOMP_BODY_WEIGHT")
@@ -329,3 +369,4 @@ for sample_lot in sample_lots:
 print(l)
 
 '''
+

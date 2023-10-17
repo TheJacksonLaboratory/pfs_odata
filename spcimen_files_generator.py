@@ -37,10 +37,6 @@ def remove_namespace(doc, namespace):
             elem.tag = elem.tag[nsl:]
 
 
-def get_stock_number(s) -> str:
-    pass
-
-
 # Function to get measured values of a strain
 def get_specimen_data(username, password) -> list[Sample]:
     mySession = pfs_session(
@@ -58,7 +54,8 @@ def get_specimen_data(username, password) -> list[Sample]:
         print("Authentication error, please check your username and password")
 
     # Get sample data related to a specific strain
-    result = mySession.get_meavals_by_strain(filter_by="JAX_STRAIN_KOMP_EAP_STATUS = In Progress")
+    #result = mySession.get_meavals_by_strain(filter_by="JAX_STRAIN_KOMP_EAP_STATUS = In Progress")
+    result = mySession.get_meavals_by_expr(experiment_name="KOMP BODY COMPOSITION", project_id="KBCP2")
     return result
 
 
@@ -113,19 +110,26 @@ def generate_xml(samples: list[Sample], filename: str):
         specimenRecord["DOB"] = sample.date_of_birth
         specimenRecord["gender"] = sample.sex
         specimenRecord["zygosity"] = get_zygosity(sample)
-        specimenRecord["litterId"] = "litterId"
+        specimenRecord["litterId"] = sample.litter_number if sample.litter_number else " "
+
+        # E.g. C57BL/6NJ-Rnf217<em1(IMPC)J>/Mmjax (JR034213), C57BL/6NJ(JR005304)
+        colony_id = sample.colony_id
+        #print(colony_id)
+        stock = colony_id.rpartition('(')[2].partition(')')[0]
+        print(stock)
+        isBaseline = stock[2:] == "005304"
+        if not isBaseline:
+            specimenRecord["colonyId"] = stock
+        else:
+            specimenRecord["colonyId"] = ""
+        specimenRecord["isBaseline"] = str(isBaseline)
         # sample.litter_number
 
         # Create a subroot using specimenRecord
         ET.SubElement(centerNode, "mouse", specimenRecord)
         # centerNode.append(paramNode)
 
-    #
-    # indent the xml
-    """xml_p = xml.dom.minidom.parseString(ET.tostring(root))
-    tree = ET.ElementTree(ET.fromstring(xml_p.toprettyxml()))"""
-    # tree = ET.ElementTree(indent(root))
-
+    #Write content to xml file
     tree = ET.ElementTree(indent(root))
     with open(filename, "wb") as f:
         tree.write(f, xml_declaration=True, encoding='utf-8')
