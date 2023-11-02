@@ -1,15 +1,15 @@
 from pfs.pfs_session import pfs_session
-import json
+import pandas as pd
+import datetime
+
+
+def convert(date_time):
+    date_format = "%Y-%m-%d"
+    datetime_str = datetime.datetime.strptime(date_time, date_format)
+    return datetime_str
+
 
 """This script is for tutorial purposes on how to pull out sample data by strain"""
-
-
-# Function to print data out
-def print_data(l):
-    res = [i.__dict__ for i in l]
-    for i in l:
-        print(f"Data received is:\n {json.dumps(i.__dict__, indent=4)}")
-
 
 # Create a Core PFS session
 mySession = pfs_session(
@@ -26,20 +26,26 @@ if pfs_auth_result.status_code == 200:
 else:
     print("Authentication error, please check your username and password")
 
-data = mySession.get_meavals()
-print_data(data)
-print(f"Number of mouse sample retrieved is {len(data)}")
+# Get data from the url
+result = mySession.get_meavals_by_req(team="KOMP")
+#data = result.get_entity_data(key_word="SAMPLE", recursive=True)
+print(f"Total number of samples get is {len(result)}")
 
-"""
-# Get sample data related to a specific strain
-strain_data = mySession.get_meavals_by_strain(barcode="JR038086")
-print_data(strain_data)
-print(f"Number of mouse sample retrieved is {len(strain_data)}")
-"""
 
-"""sample_lot_data = mySession.get_sample_lot(experiment_name="komp body weight")
-print_data(sample_lot_data)
-print(f"Number of mouse sample lots retrieved is {len(sample_lot_data)}")"""
+filtered_data = []
 
-'''strains = mySession.get_strain(filter_by="JAX_STRAIN_KOMP_EAP_STATUS = In Progress")
-print_data(strains)'''
+# Say we want to filter on condition that mice's date of birth > 2023-07-31
+date_to_compare = datetime.datetime(2023, 7, 31)
+for d in result:
+    sample_date_of_birth = convert(date_time=d["JAX_MOUSESAMPLE_DATEOFBIRTH"])
+    if sample_date_of_birth > date_to_compare:
+        filtered_data.append(d)
+
+print(f"Number of samples after filtering is {len(filtered_data)}")
+
+# Load filtered into .csv file to report
+df = pd.DataFrame(filtered_data)
+print(df)
+
+
+#df.to_csv("Example.csv")

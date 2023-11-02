@@ -10,14 +10,6 @@ operators = {
     "||": "or"
 }
 
-#Dict to translate user input entity type name to key value in the json data
-entity_types = {
-    "MOUSE_SAMPLE": "MOUSE_SAMPLE",
-    "SAMPLE": "SAMPLE",
-    "SAMPLE_LOT": "ENTITY",
-    "STRAIN": "JAXSTRAIN"
-}
-
 
 # Function to reformat the experiment name, for example, if users input cba glucose tolerance test,
 # it will return CBA_GLUCOSE_TOLERANCE_TEST
@@ -89,95 +81,8 @@ def generate_orderby_str(order_by: tuple):
     return f"{order_by[0]} {order_by[1]}"
 
 
-exp_assay_attribute_dict = {
-
-}
-
-#Implement it next week
-strain_attribute_dict = {
-
-}
-
-sample_attribute_dict = {
-    "entitytypename": "entity_type",
-    "id": "id",
-    "name": "name",
-    "barcode": "barcode",
-    "created": "data_created",
-    "modified": "date_modified",
-    "active": "active",
-    "likedby": "likeby",
-    "jax_mousesample_treatmentgroup": "treatment_group",
-    "jax_mousesample_dietgraintype": "diet",
-    "jax_mousesample_bedding": "bedding",
-    "jax_mousesample_isalive": "received_alive",
-    "jax_mousesample_isfiller": "filler_mouse",
-    "jax_mousesample_accomodation": "accomodation",
-    "jax_sample_currentclinicalobs": "current_clinical_observation",
-    "jax_mousesample_anticipatedphenotype": "anticipated_clinical_observation",
-    "jax_mousesample_additionalinformation": "additional_info",
-    "jax_mousesample_immunosufficiency": "immune_status",
-    "jax_sample_externalid": "specimen_id",
-    "jax_mousesample_litternumber": "litter_number",
-    "jax_mousesample_primaryid": "primary_id",
-    "jax_mousesample_primaryidvalue": "primary_id_value",
-    "jax_mousesample_secondaryid": "secondary_id",
-    "jax_mousesample_secondaryidvalue": "secondary_id_value",
-    "jax_sample_cohortname": "cohort_name",
-    "jax_mousesample_blindid": "blind_id",
-    "jax_mousesample_mepid": "mep_id",
-    "jax_mousesample_nbpid": "nbp_group_id",
-    "jax_mousesample_pooledrole": "role",
-    "jax_mousesample_sourcepenid": "source_pen_id",
-    "jax_mousesample_sex": "sex",
-    "jax_sample_mousecolonyroom": "mouse_room_of_origin",
-    "jax_sample_mouseroomsection": "section_of_origin",
-    "jax_mousesample_dateofbirth": "date_of_birth",
-    "jax_sample_comments": "comments",
-    "jax_mousesample_dateofdeath": "date_of_death",
-    "jax_mousesample_reasonfordeath": "reason_for_death",
-    "jax_mousesample_usersdefinedstrainname": "user_defined_strain_name",
-    "jax_mousesample_genotype": "genotype",
-    "jax_mousesample_coatcolor": "coat_color",
-    "jax_mousesample_pedigree": "pedigree",
-    "jax_mousesample_wholemousefail": "whole_mouse_fail",
-    "jax_mousesample_wholemousefailreasons": "fail_reason",
-    "jax_mousesample_wholemousefailexplanation": "explanation",
-    "jax_mousesample_lotreport": "lot_report",
-    "jax_uuid_useforname": "use_for_mouse_name",
-    "jax_mousesample_mousemanifestversion": "mouse_manifest_version",
-    "jax_mousesample_activestatusversiontracker": "active_status_tracker",
-    "jax_mousesample_exitreason": "exit_reason",
-    "jax_mousesample_allele": "colony_id"
-}
-
-sample_lot_attribute_dict = {
-    "entitytypename": "entity_type",
-    "id": "id",
-    "name": "name",
-    "barcode": "barcode",
-    "created": "data_created",
-    "modified": "date_modified",
-    "active": "active",
-    "likedby": "likeby",
-    "jax_samplelot_status": "sample_lot_status",
-    "jax_samplelot_datecollected": "date_collected",
-    "jax_samplelot_datereceived": "date_received",
-    "jax_samplelot_collectionmethod": "collection_method",
-    "jax_samplelot_transportmedia": "transport_media",
-    "jax_samplelot_source": "source",
-    "jax_samplelot_comment": "comment",
-    "jax_samplelot_faildata": "all_lot_failed",
-    "jax_samplelot_faildatareason": "failed_reason",
-    "jax_samplelot_fundus_required": "fundus_required",
-    "jax_samplelot_fundus_comment": "fundus_comment"
-}
-
-# Dict to reference the dict of entity types when converting it into its corresponding data model
-dict_of_entity = {
-    "MOUSE_SAMPLE": sample_attribute_dict,
-    "SAMPLE": sample_attribute_dict,
-    "SAMPLE_LOT": sample_lot_attribute_dict,
-    "ASSAY": exp_assay_attribute_dict,
-    "STRAIN": strain_attribute_dict
+# Dict to translate user input entity type name to key value in the json data
+entityTypeName = {
+    "SAMPLE": "MOUSE_SAMPLE",
+    "SAMPLE_LOT": "MOUSE_SAMPLE_LOT"
 }

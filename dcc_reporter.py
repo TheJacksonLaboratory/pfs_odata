@@ -28,13 +28,8 @@ def indent(elem, level=0):
     return elem
 
 
-# Function to remove namespace in the xml data
-def remove_namespace(doc, namespace):
-    ns = u'{%s}' % namespace
-    nsl = len(ns)
-    for elem in doc.getiterator():
-        if elem.tag.startswith(ns):
-            elem.tag = elem.tag[nsl:]
+def remove_first_occurrence(s: str, c: str) -> str:
+    return s.replace(c, '', 1)
 
 
 # Function to get measured values of a strain
@@ -54,7 +49,7 @@ def get_specimen_data(username, password) -> list[Sample]:
         print("Authentication error, please check your username and password")
 
     # Get sample data related to a specific strain
-    #result = mySession.get_meavals_by_strain(filter_by="JAX_STRAIN_KOMP_EAP_STATUS = In Progress")
+    # result = mySession.get_meavals_by_strain(filter_by="JAX_STRAIN_KOMP_EAP_STATUS = In Progress")
     result = mySession.get_meavals_by_expr(experiment_name="KOMP BODY COMPOSITION", project_id="KBCP2")
     return result
 
@@ -76,6 +71,10 @@ def get_zygosity(sample) -> str:
         print("Invalid genotype value detected")
 
     return zygosity
+
+
+def get_gender(gender: str) -> str:
+    return "male" if gender == "M" else "female"
 
 
 """
@@ -106,30 +105,31 @@ def generate_xml(samples: list[Sample], filename: str):
     }
 
     for sample in samples:
+        specimenRecord["strainID"] = "MGI:3056279"
         specimenRecord["specimenID"] = sample.specimen_id
         specimenRecord["DOB"] = sample.date_of_birth
-        specimenRecord["gender"] = sample.sex
+        specimenRecord["gender"] = get_gender(sample.sex)
         specimenRecord["zygosity"] = get_zygosity(sample)
         specimenRecord["litterId"] = sample.litter_number if sample.litter_number else " "
 
         # E.g. C57BL/6NJ-Rnf217<em1(IMPC)J>/Mmjax (JR034213), C57BL/6NJ(JR005304)
         colony_id = sample.colony_id
-        #print(colony_id)
         stock = colony_id.rpartition('(')[2].partition(')')[0]
-        print(stock)
+        # print(stock)
         isBaseline = stock[2:] == "005304"
         if not isBaseline:
-            specimenRecord["colonyId"] = stock
+            specimenRecord["colonyID"] = remove_first_occurrence(stock, '0')
         else:
-            specimenRecord["colonyId"] = ""
-        specimenRecord["isBaseline"] = str(isBaseline)
+            del specimenRecord["colonyID"]
+
+        specimenRecord["isbaseline"] = str(isBaseline).lower()
         # sample.litter_number
 
         # Create a subroot using specimenRecord
         ET.SubElement(centerNode, "mouse", specimenRecord)
         # centerNode.append(paramNode)
 
-    #Write content to xml file
+    # Write content to xml file
     tree = ET.ElementTree(indent(root))
     with open(filename, "wb") as f:
         tree.write(f, xml_declaration=True, encoding='utf-8')
