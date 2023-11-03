@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<centreSpecimenSet xmlns="http://www.mousephenotype.org/dcc/exportlibrary/datastructure/core/specimen">
+  <centre centreID="J">
+    <mouse pipeline="JAX_001" productionCenter="J" phenotypingCenter="J" project="JAX" strainID="MGI:3056279" DOB="2023-05-07" gender="female" zygosity="?/?" litterId="1" colonyID="JR00646" isBaseline="false" />
+  <mouse pipeline="JAX_001" productionCenter="J" phenotypingCenter="J" project="JAX" strainID="MGI:3056279" DOB="2023-08-01" gender="female" zygosity="?/?" litterId=" " colonyID="KOMP Strain 1" isBaseline="false" />
+  <mouse pipeline="JAX_001" productionCenter="J" phenotypingCenter="J" project="JAX" strainID="MGI:3056279" DOB="2023-08-01" gender="female" zygosity="?/?" litterId=" " colonyID="KOMP Strain 2" isBaseline="false" />
+  <mouse pipeline="JAX_001" productionCenter="J" phenotypingCenter="J" project="JAX" strainID="MGI:3056279" DOB="2023-08-01" gender="female" zygosity="?/?" litterId=" " colonyID="KOMP Strain 2" isBaseline="false" />
+  <mouse pipeline="JAX_001" productionCenter="J" phenotypingCenter="J" project="JAX" strainID="MGI:3056279" DOB="2023-08-01" gender="female" zygosity="?/?" litterId=" " colonyID="KOMP Strain 1" isBaseline="false" />
+  </centre>
+</centreSpecimenSet>
