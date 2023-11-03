@@ -1,13 +1,8 @@
-from pfs.pfs_session import pfs_session
-from pfs.models import Sample
-import json
-from datetime import datetime
-from os.path import isfile, join, basename
-import glob
-from zipfile import ZipFile
 import xml.etree.ElementTree as ET
-import xml.dom.minidom
-from lxml import etree, builder
+from getpass import getpass
+
+from pfs.models import Sample
+from pfs.pfs_session import pfs_session
 
 
 def indent(elem, level=0):
@@ -48,30 +43,11 @@ def get_specimen_data(username, password) -> list[Sample]:
     else:
         print("Authentication error, please check your username and password")
 
-    # Get sample data related to a specific strain
-    # result = mySession.get_meavals_by_strain(filter_by="JAX_STRAIN_KOMP_EAP_STATUS = In Progress")
-    result = mySession.get_meavals_by_expr(experiment_name="KOMP BODY COMPOSITION", project_id="KBCP2")
+    result = mySession.get_meavals_by_proj(experiment_name="KOMP LIGHT DARK BOX", project_id="KLDB4")
     return result
 
 
 # Function to extract zygosity of a measured sample
-def get_zygosity(sample) -> str:
-    if not sample:
-        return ''
-    zygosity = '?/?'
-    if sample.genotype == "+/+":
-        zygosity = "wild type"
-    elif sample.genotype == "+/-" or sample.genotype == '-/+':
-        zygosity = "heterozygous"
-    elif sample.genotype == "-/-":
-        zygosity = "homozygous"
-    elif sample.genotype == "-/Y":
-        zygosity = 'hemizygous'
-    else:
-        print("Invalid genotype value detected")
-
-    return zygosity
-
 
 def get_gender(gender: str) -> str:
     return "male" if gender == "M" else "female"
@@ -106,28 +82,25 @@ def generate_xml(samples: list[Sample], filename: str):
 
     for sample in samples:
         specimenRecord["strainID"] = "MGI:3056279"
-        specimenRecord["specimenID"] = sample.specimen_id
-        specimenRecord["DOB"] = sample.date_of_birth
+        specimenRecord["DOB"] = sample.dob
         specimenRecord["gender"] = get_gender(sample.sex)
-        specimenRecord["zygosity"] = get_zygosity(sample)
+        specimenRecord["zygosity"] = sample.get_zygosity()
         specimenRecord["litterId"] = sample.litter_number if sample.litter_number else " "
 
         # E.g. C57BL/6NJ-Rnf217<em1(IMPC)J>/Mmjax (JR034213), C57BL/6NJ(JR005304)
-        colony_id = sample.colony_id
+        colony_id = sample.allele
         stock = colony_id.rpartition('(')[2].partition(')')[0]
-        # print(stock)
+        print(stock)
         isBaseline = stock[2:] == "005304"
         if not isBaseline:
             specimenRecord["colonyID"] = remove_first_occurrence(stock, '0')
         else:
             del specimenRecord["colonyID"]
 
-        specimenRecord["isbaseline"] = str(isBaseline).lower()
-        # sample.litter_number
+        specimenRecord["isBaseline"] = str(isBaseline).lower()
 
         # Create a subroot using specimenRecord
         ET.SubElement(centerNode, "mouse", specimenRecord)
-        # centerNode.append(paramNode)
 
     # Write content to xml file
     tree = ET.ElementTree(indent(root))
@@ -136,8 +109,8 @@ def generate_xml(samples: list[Sample], filename: str):
 
 
 if __name__ == "__main__":
-    pfs_username = "svc-limsdb@jax.org"
-    pfs_password = "vA&ce3(ROzAL"
-
-    specimen_data = get_specimen_data(username=pfs_username, password=pfs_password)
+    username = input("Username: ")
+    password = getpass()
+    print("Password entered: ", password)
+    specimen_data = get_specimen_data(username=username, password=password)
     generate_xml(specimen_data, filename="sample.xml")

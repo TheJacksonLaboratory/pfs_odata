@@ -8,7 +8,7 @@ from typing import Optional
 import requests
 
 from .commons import format_experiment_name, generate_filter_str, generate_orderby_str, is_date
-from .models import pfsHttpResult
+from .models import pfsHttpResult, Sample
 from .pfs_exceptions import pfsApiException
 
 
@@ -191,8 +191,8 @@ class pfs_session:
         result = api_response.search_pair(api_response.data, field="EntityTypeName", field_val="MOUSE_SAMPLE")
         return result
 
-    def get_meavals_by_expr(self, experiment_name: str, project_id: str,
-                            order_by: Optional[tuple] = None) -> pfsHttpResult:
+    def get_meavals_by_proj(self, experiment_name: str, project_id: str,
+                            order_by: Optional[tuple] = None):
 
         """
         Function to get animal measured values and animal ids, for the given procedure and filtering/ordering conditions.
@@ -217,10 +217,13 @@ class pfs_session:
         url = self.create_request(url=f"{self.base_url}{ENDPOINT}",
                                   params=params,
                                   order_by=order_by)
-
+        #Get data
+        result = []
         self._logger.info(f"Sending request to {url}")
         api_response = self.make_api_call(url=url, http_method="GET", payload={})
-        result = api_response.search_pair(api_response.data, field="EntityTypeName", field_val="MOUSE_SAMPLE")
+        data_extract = api_response.extract_data(entity_type="EntityTypeName", entity_name="MOUSE_SAMPLE")
+        for item in data_extract:
+            result.append(Sample(**item))
         return result
 
     def get_meavals_by_strain(self, barcode: Optional[str] = None, order_by: Optional[tuple] = None,
@@ -279,9 +282,12 @@ class pfs_session:
                                   order_by=order_by,
                                   filter_by=filter_by)
         # print(url)
+        result = []
         self._logger.info(f"Sending request to {url}")
         api_response = self.make_api_call(url=url, http_method="GET", payload={})
-        result = api_response.search_pair(api_response.data, field="EntityTypeName", field_val="MOUSE_SAMPLE")
+        data_extract = api_response.extract_data(entity_type="EntityTypeName", entity_name="MOUSE_SAMPLE")
+        for item in data_extract:
+            result.append(Sample(**item))
         return result
 
     def get_meavals_by_batch(self, order_by: Optional[tuple] = None,

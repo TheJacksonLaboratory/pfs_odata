@@ -28,6 +28,7 @@ else:
 
 # Get data from the url
 result = mySession.get_meavals_by_req(team="KOMP")
+print(type(result[0]))
 #data = result.get_entity_data(key_word="SAMPLE", recursive=True)
 print(f"Total number of samples get is {len(result)}")
 
@@ -36,8 +37,9 @@ filtered_data = []
 
 # Say we want to filter on condition that mice's date of birth > 2023-07-31
 date_to_compare = datetime.datetime(2023, 7, 31)
-for d in result:
-    sample_date_of_birth = convert(date_time=d["JAX_MOUSESAMPLE_DATEOFBIRTH"])
+for sample in result:
+    d = sample.__dict__
+    sample_date_of_birth = convert(date_time=d["dob"])
     if sample_date_of_birth > date_to_compare:
         filtered_data.append(d)
 
